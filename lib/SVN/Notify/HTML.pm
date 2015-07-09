@@ -1,16 +1,19 @@
 package SVN::Notify::HTML;
 
+# $Id: HTML.pm 4617 2009-03-19 17:04:53Z david $
+
 use strict;
 use HTML::Entities;
 use SVN::Notify ();
 
-$SVN::Notify::HTML::VERSION = '2.85';
+$SVN::Notify::HTML::VERSION = '2.79';
 @SVN::Notify::HTML::ISA = qw(SVN::Notify);
 
 __PACKAGE__->register_attributes(
     linkize   => 'linkize',
     css_url   => 'css-url=s',
     wrap_log  => 'wrap-log',
+    css_inline => 'css-inline',
 );
 
 =head1 Name
@@ -143,6 +146,16 @@ output HTML. By default, log messages are I<not> wrapped, on the assumption
 that they should appear exactly as typed. But if that's not the case, specify
 this option to wrap the log message.
 
+=item css_inline
+
+  svnnotify --css-inline
+
+A boolean attribute to specify whether or not to put the css code inside the 
+HTML tags. This is useful when sending the HTML output to a web based email 
+such as gmail so it can still be able to be rendered nicely. If this option 
+is enabled, the CSS defined in the css_url property will be ignored and will
+use the generated inline style.
+
 =back
 
 =cut
@@ -236,10 +249,13 @@ sub start_body {
     $self->output_css( $out );
     print $out qq{--></style>\n};
 
-    my @html = ( qq{<div id="msg">\n} );
+    my @html = ( $self->{css_inline} ? (qq{<div id="msg" style="color:black;">\n}) : 
+		(qq{<div id="msg">\n}) );
     if (my $header = $self->header) {
         push @html, (
-            '<div id="header">',
+            ( $self->{css_inline} ? 
+				'<div id="header" style="color: #fff; background: #636; border: 1px #300 solid; padding: 6px;font-family: verdana,arial,helvetica,sans-serif; font-size: 10pt; ">': 
+				'<div id="header">'),
             ( $header =~ /^</  ? $header : encode_entities($header, '<>&"') ),
             "</div>\n",
         );
@@ -298,24 +314,30 @@ sub output_metadata {
         return $self->SUPER::output_metadata($out);
     }
 
-    print $out qq{<dl class="meta">\n<dt>Revision</dt> <dd>};
-
+    print $out ( $self->{css_inline} ? (
+        qq{<dl class="meta" style="border: 1px #006 solid; background: #369; padding: 6px; color: #fff; font-family: verdana,arial,helvetica,sans-serif; font-size: 10pt;">\n},
+        qq{<dt style="float: left; width: 6em; font-weight: bold;font-family: verdana,arial,helvetica,sans-serif; font-size: 10pt;">Revision:</dt> <dd>}
+    ) : qq{<dl class="meta">\n<dt>Revision</dt> <dd>});
     my $rev = $self->revision;
     if (my $url = $self->revision_url) {
         $url = encode_entities($url, '<>&"');
         # Make the revision number a URL.
-        printf $out qq{<a href="$url">$rev</a>}, $rev;
+        printf $out ( $self->{css_inline} ? qq{<a style="color: white;font-weight: bold;" href="$url">$rev</a>} : qq{<a href="$url">$rev</a>}), $rev;
     } else {
         # Just output the revision number.
         print $out $rev;
     }
 
     # Output the committer and a URL, if there is one.
-    print $out "</dd>\n<dt>Author</dt> <dd>";
+    print $out ( $self->{css_inline} ? 
+		qq{</dd>\n<dt style="float: left; width: 6em; font-weight: bold;font-family: verdana,arial,helvetica,sans-serif; font-size: 10pt;">Author:</dt> <dd>} : 
+		"</dd>\n<dt>Author</dt> <dd>");
     my $user = encode_entities($self->user, '<>&"');
     if (my $url = $self->author_url) {
         $url = encode_entities($url, '<>&"');
-        printf $out qq{<a href="$url">$user</a>}, $user;
+        printf $out ($self->{css_inline} ? 
+			qq{<a style="color: white;font-weight: bold" href="$url">$user</a>} : 
+			qq{<a href="$url">$user</a>}), $user;
     } else {
         # Just output the username
         print $out $user;
@@ -323,7 +345,9 @@ sub output_metadata {
 
     print $out (
         "</dd>\n",
-        '<dt>Date</dt> <dd>',
+        ($self->{css_inline} ? 
+			qq{<dt style="float: left; width: 6em; font-weight: bold;font-family: verdana,arial,helvetica,sans-serif; font-size: 10pt;">Date:</dt> <dd>} : 
+			'<dt>Date</dt> <dd>'),
         encode_entities($self->date, '<>&"'), "</dd>\n",
         "</dl>\n\n"
     );
@@ -392,15 +416,21 @@ sub output_log_message {
 
     print $out "<h3>Log Message</h3>\n";
     if ($filters || $self->wrap_log) {
-        $msg = '<p>' . join( "</p>\n\n<p>", split /\n\s*\n/, $msg ) . '</p>'
-            if !$filters && $self->wrap_log;
-        print $out (
-            qq{<div id="logmsg">\n},
-            $msg,
-            qq{</div>\n\n},
-        )
+        $msg = ($self->{css_inline} ? 
+			'<p style="margin: 0 0 1em 0;line-height: 14pt;">' . join( "</p>\n\n<p style=\"margin: 0 0 1em 0;line-height: 14pt;\">", split /\n\s*\n/, $msg ) . '</p>' : 
+			'<p>' . join( "</p>\n\n<p>", split /\n\s*\n/, $msg ) . '</p>')
+        if !$filters && $self->wrap_log;
+			print $out (
+				($self->{css_inline} ? 
+					qq{<div id="logmsg" style="background: #ffc; border: 1px #fa0 solid; padding: 0 1em 0 1em; font-family: verdana,arial,helvetica,sans-serif; font-size: 10pt;">\n} : 
+					qq{<div id="logmsg">\n}),
+				$msg,
+				qq{</div>\n\n},
+			)
     } else {
-        print $out "<pre>$msg</pre>\n\n";
+        print $out ($self->{css_inline} ? 
+			qq{<pre style="overflow: auto; background: #ffc; border: 1px #fa0 solid; padding: 6px;">$msg</pre>\n\n} : 
+			"<pre>$msg</pre>\n\n");
     }
     return $self;
 }
@@ -488,7 +518,9 @@ sub end_body {
     my @html;
     if (my $footer = $self->footer) {
         push @html, (
-            '<div id="footer">',
+            ($self->{css_inline} ? 
+				'<div id="footer" style="color: #fff; background: #636; border: 1px #300 solid; padding: 6px;font-family: verdana,arial,helvetica,sans-serif; font-size: 10pt; ">' : 
+				'<div id="footer">'),
             ( $footer =~ /^</  ? $footer : encode_entities($footer, '<>&"') ),
             "</div>\n",
         );
@@ -578,6 +610,13 @@ Gets or sets the value of the C<linkize> attribute.
 
 Gets or sets the value of the C<css_url> attribute.
 
+=head3 css_inline
+
+  my $css_inline = $notifier->css_inline;
+  $notifier = $notifier->css_inline($css_inline);
+
+Gets or sets the value of the C<css_inline> attribute.
+
 =cut
 
 ##############################################################################
@@ -596,7 +635,7 @@ sub _css {
         qq(#msg dl a:visited { color:#cc6; }\n),
         q(h3 { font-family: verdana,arial,helvetica,sans-serif; ),
             qq(font-size: 10pt; font-weight: bold; }\n),
-        q(#msg pre { white-space: pre-line; overflow: auto; background: #ffc; ),
+        q(#msg pre { overflow: auto; background: #ffc; ),
             qq(border: 1px #fa0 solid; padding: 6px; }\n),
         qq(#logmsg { background: #ffc; border: 1px #fa0 solid; padding: 1em 1em 0 1em; }\n),
         qq(#logmsg p, #logmsg pre, #logmsg blockquote { margin: 0 0 1em 0; }\n),
@@ -638,11 +677,11 @@ __END__
 
 =head1 Author
 
-David E. Wheeler <david@justatheory.com>
+David E. Wheeler <david@kineticode.com>
 
 =head1 Copyright and License
 
-Copyright (c) 2004-2011 David E. Wheeler. Some Rights Reserved.
+Copyright (c) 2004-2008 Kineticode, Inc. Some Rights Reserved.
 
 This module is free software; you can redistribute it and/or modify it under
 the same terms as Perl itself.

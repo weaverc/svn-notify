@@ -1,10 +1,12 @@
 package SVN::Notify::HTML::ColorDiff;
 
+# $Id: ColorDiff.pm 4332 2008-09-24 04:33:22Z david $
+
 use strict;
 use HTML::Entities;
 use SVN::Notify::HTML ();
 
-$SVN::Notify::HTML::ColorDiff::VERSION = '2.85';
+$SVN::Notify::HTML::ColorDiff::VERSION = '2.79';
 @SVN::Notify::HTML::ColorDiff::ISA = qw(SVN::Notify::HTML);
 
 =head1 Name
@@ -104,7 +106,9 @@ sub output_diff {
         next unless $line;
         if ( $max && ( $length += length $line ) >= $max ) {
             print $out "</$in_span>" if $in_span;
-            print $out qq{<span class="lines">\@\@ Diff output truncated at $max characters. \@\@\n</span>};
+            print $out ($self->css_inline ? 
+				qq{<span class="lines" style="display:block;padding:0 10px;color:#888;background:#fff;">\@\@ Diff output truncated at $max characters. \@\@\n</span>} :
+				qq{<span class="lines">\@\@ Diff output truncated at $max characters. \@\@\n</span>});
             $in_span = '';
             last;
         } else {
@@ -121,8 +125,10 @@ sub output_diff {
                 if (<$diff> !~ /^=/) {
                     # Looks like they used --no-diff-added or --no-diff-deleted.
                     ($in_span, $in_div) = '';
-                    print $out qq{<a id="$id"></a>\n<div class="$class">},
-                        qq{<h4>$action: $file</h4></div>\n};
+                    print $out ($self->css_inline ? 
+						( qq{<a id="$id"></a>\n<div class="$class" style="border:1px solid #ccc;margin:10px 0;">},
+                          qq{<h4 style="font-family: verdana,arial,helvetica,sans-serif;font-size:10pt;padding:8px;background:#369;color:#fff;margin:0;">$action: $file</h4></div>\n}) :
+						(qq{<a id="$id"></a>\n<div class="$class">}, qq{<h4>$action: $file</h4></div>\n}));
                     next;
                 }
 
@@ -132,9 +138,15 @@ sub output_diff {
 
                 if ($before =~ /^\(Binary files differ\)/) {
                     # Just output the whole file div.
-                    print $out qq{<a id="$id"></a>\n<div class="binary"><h4>},
-                      qq{$action: $file</h4>\n<pre class="diff"><span>\n},
-                      qq{<span class="cx">$before\n</span></span></pre></div>\n};
+                    print $out ($self->css_inline ? 
+						( qq{<a id="$id"></a>\n<div class="binary" style="border:1px solid #ccc;margin:10px 0;"><h4 style="font-family: verdana,arial,helvetica,sans-serif;font-size:10pt;padding:8px;background:#369;color:#fff;margin:0;">},
+						  qq{$action: $file</h4>\n},
+						  qq{<pre class="diff" style="color:black;padding:0;line-height:1.2em;margin:0;width:100%;background:#eee;padding: 0 0 10px 0;overflow:auto;font-family:'Andale Mono','Courier New',monospace;font-size:9pt;">},
+						  qq{<span style="display:block;padding:0 10px;">\n},
+						  qq{<span style="display:block;padding:0 10px;">$before\n</span></span></pre></div>\n}):
+						( qq{<a id="$id"></a>\n<div class="binary"><h4>},
+						  qq{$action: $file</h4>\n<pre class="diff"><span>\n},
+						  qq{<span class="cx">$before\n</span></span></pre></div>\n}))  ;
                     ($in_span, $in_div) = '';
                     next;
                 }
@@ -145,9 +157,16 @@ sub output_diff {
                 my ($rev2) = $after =~ /\(rev (\d+)\)$/;
 
                 # Output the headers.
-                print $out qq{<a id="$id"></a>\n<div class="$class"><h4>$action: $file},
-                  " ($rev1 => $rev2)</h4>\n";
-                print $out qq{<pre class="diff"><span>\n<span class="info">};
+                print $out ($self->css_inline ? 
+						( qq{<a id="$id"></a>\n<div class="$class" style="border:1px solid #ccc;margin:10px 0;">},
+                          qq{<h4 style="font-family: verdana,arial,helvetica,sans-serif;font-size:10pt;padding:8px;background:#369;color:#fff;margin:0;">$action: $file},
+						  " ($rev1 => $rev2)</h4>\n") :
+						( qq{<a id="$id"></a>\n<div class="$class"><h4>$action: $file},
+						  " ($rev1 => $rev2)</h4>\n" ));
+                print $out ($self->css_inline ? 
+						( qq{<pre class="diff" style="color:black;padding:0;line-height:1.2em;margin:0;width:100%;background:#eee;padding: 0 0 10px 0;overflow:auto;font-family:'Andale Mono','Courier New',monospace;font-size:9pt;">},
+                          qq{<span style="display:block;padding:0 10px;">\n<span class="info" style="display:block;padding:0 10px;color:#888;background:#fff;">}) : 
+						qq{<pre class="diff"><span>\n<span class="info">})  ;
                 $in_div = 1;
                 print $out encode_entities($_, '<>&"'), "\n" for ($before, $after);
                 print $out "</span>";
@@ -162,14 +181,22 @@ sub output_diff {
                 # Output the headers.
                 print $out "</$in_span>" if $in_span;
                 print $out "</span></pre></div>\n" if $in_div;
-                print $out qq{<a id="$id"></a>\n<div class="propset">},
-                  qq{<h4>Property changes: $file</h4>\n<pre class="diff"><span>\n};
+                print $out ($self->css_inline ? 
+				    ( qq{<a id="$id"></a>\n<div class="propset" style="border:1px solid #ccc;margin:10px 0;">},
+					  qq{<h4 style="font-family: verdana,arial,helvetica,sans-serif;font-size:10pt;padding:8px;background:#369;color:#fff;margin:0;">},
+					  qq{Property changes: $file</h4>\n},
+					  qq{<pre class="diff" style="color:black;padding:0;line-height:1.2em;margin:0;width:100%;background:#eee;padding: 0 0 10px 0;overflow:auto;font-family:'Andale Mono','Courier New',monospace;font-size:9pt;">},
+					  qq{<span style="display:block;padding:0 10px;">\n}) :
+					( qq{<a id="$id"></a>\n<div class="propset">},
+					  qq{<h4>Property changes: $file</h4>\n<pre class="diff"><span>\n}));
                 $in_div = 1;
                 $in_span = '';
             } elsif ($line =~ /^\@\@/) {
                 print $out "</$in_span>" if $in_span;
                 print $out (
-                    qq{<span class="lines">},
+                    ($self->css_inline ? 
+						qq{<span class="lines" style="display:block;padding:0 10px;color:#888;background:#fff;">} :
+						qq{<span class="lines">}),
                     encode_entities($line, '<>&"'),
                     "\n</span>",
                 );
@@ -179,9 +206,12 @@ sub output_diff {
                 if ($in_span eq $type) {
                     print $out encode_entities($line, '<>&"'), "\n";
                 } else {
+                    my $clr = $type eq 'ins' ? '#dfd' : '#fdd';
                     print $out "</$in_span>" if $in_span;
                     print $out (
-                        qq{<$type>},
+                        ($self->css_inline ? 
+							qq{<$type style="background-color:$clr;text-decoration:none;display:block;padding:0 10px;">} :
+							qq{<$type>}),
                         encode_entities($line, '<>&"'),
                         "\n",
                     );
@@ -193,7 +223,9 @@ sub output_diff {
                 } else {
                     print $out "</$in_span>" if $in_span;
                     print $out (
-                        qq{<span class="cx">},
+                        ($self->css_inline ? 
+							qq{<span class="cx" style="display:block;padding:0 10px;">} : 
+							qq{<span class="cx">}),
                         encode_entities($line, '<>&"'),
                         "\n",
                     );
@@ -246,7 +278,7 @@ __END__
 
 =item L<SVN::Notify::HTML|SVN::Notify::HTML>
 
-=item L<CVSspam|http://www.badgers-in-foil.co.uk/projects/cvsspam/>
+=item CVSspam: L<http://www.badgers-in-foil.co.uk/projects/cvsspam/>
 
 =back
 
@@ -271,11 +303,11 @@ body. Maybe use absolute positioning CSS?
 
 =head1 Author
 
-David E. Wheeler <david@justatheory.com>
+David E. Wheeler <david@kineticode.com>
 
 =head1 Copyright and License
 
-Copyright (c) 2004-2011 David E. Wheeler. Some Rights Reserved.
+Copyright (c) 2004-2008 Kineticode, Inc. Some Rights Reserved.
 
 This module is free software; you can redistribute it and/or modify it under
 the same terms as Perl itself.
