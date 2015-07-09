@@ -141,7 +141,7 @@ sub output_diff {
                     print $out ($self->css_inline ? 
 						( qq{<a id="$id"></a>\n<div class="binary" style="border:1px solid #ccc;margin:10px 0;"><h4 style="font-family: verdana,arial,helvetica,sans-serif;font-size:10pt;padding:8px;background:#369;color:#fff;margin:0;">},
 						  qq{$action: $file</h4>\n},
-						  qq{<pre class="diff" style="color:black;padding:0;line-height:1.2em;margin:0;width:100%;background:#eee;padding: 0 0 10px 0;overflow:auto;font-family:'Andale Mono','Courier New',monospace;font-size:9pt;">},
+						  qq{<pre class="diff" style="color:black;padding:0;line-height:1.2em;margin:0;width:100%;background:#eee;max-width:100%;padding: 0 0 10px 0;overflow:auto;font-family:'Andale Mono','Courier New',monospace;font-size:9pt;">},
 						  qq{<span style="display:block;padding:0 10px;">\n},
 						  qq{<span style="display:block;padding:0 10px;">$before\n</span></span></pre></div>\n}):
 						( qq{<a id="$id"></a>\n<div class="binary"><h4>},
@@ -164,7 +164,7 @@ sub output_diff {
 						( qq{<a id="$id"></a>\n<div class="$class"><h4>$action: $file},
 						  " ($rev1 => $rev2)</h4>\n" ));
                 print $out ($self->css_inline ? 
-						( qq{<pre class="diff" style="color:black;padding:0;line-height:1.2em;margin:0;width:100%;background:#eee;padding: 0 0 10px 0;overflow:auto;font-family:'Andale Mono','Courier New',monospace;font-size:9pt;">},
+						( qq{<pre class="diff" style="color:black;padding:0;line-height:1.2em;margin:0;width:100%;background:#eee;max-width:100%;padding: 0 0 10px 0;overflow:auto;font-family:'Andale Mono','Courier New',monospace;font-size:9pt;">},
                           qq{<span style="display:block;padding:0 10px;">\n<span class="info" style="display:block;padding:0 10px;color:#888;background:#fff;">}) : 
 						qq{<pre class="diff"><span>\n<span class="info">})  ;
                 $in_div = 1;
@@ -185,7 +185,7 @@ sub output_diff {
 				    ( qq{<a id="$id"></a>\n<div class="propset" style="border:1px solid #ccc;margin:10px 0;">},
 					  qq{<h4 style="font-family: verdana,arial,helvetica,sans-serif;font-size:10pt;padding:8px;background:#369;color:#fff;margin:0;">},
 					  qq{Property changes: $file</h4>\n},
-					  qq{<pre class="diff" style="color:black;padding:0;line-height:1.2em;margin:0;width:100%;background:#eee;padding: 0 0 10px 0;overflow:auto;font-family:'Andale Mono','Courier New',monospace;font-size:9pt;">},
+					  qq{<pre class="diff" style="color:black;padding:0;line-height:1.2em;margin:0;width:100%;background:#eee;max-width:100%;padding: 0 0 10px 0;overflow:auto;font-family:'Andale Mono','Courier New',monospace;font-size:9pt;">},
 					  qq{<span style="display:block;padding:0 10px;">\n}) :
 					( qq{<a id="$id"></a>\n<div class="propset">},
 					  qq{<h4>Property changes: $file</h4>\n<pre class="diff"><span>\n}));
@@ -252,7 +252,7 @@ sub _css {
             qq(margin:0;}\n),
         qq(#patch .propset h4, #patch .binary h4 {margin:0;}\n),
          qq(#patch pre {padding:0;line-height:1.2em;margin:0;}\n),
-        qq(#patch .diff {width:100%;background:#eee;padding: 0 0 10px 0;),
+        qq(#patch .diff {width:100%;background:#eee;max-width:100%;padding: 0 0 10px 0;),
             qq(overflow:auto;}\n),
         qq(#patch .propset .diff, #patch .binary .diff  {padding:10px 0;}\n),
         qq(#patch span {display:block;padding:0 10px;}\n),
