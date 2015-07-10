@@ -100,23 +100,31 @@ sub output_diff {
     print $out qq{</div>\n<div id="patch">\n<h3>Diff</h3>\n};
     my ($length, %seen) = 0;
     my $max = $self->max_diff_length;
+    my $excluded_file_types = qr/(.pb.h|.pb.cc|_pb2.py)/;
+    my $skipping_file_diff = 0;
 
     while (my $line = <$diff>) {
         $line =~ s/[\n\r]+$//;
+        # strip tabs and replace with 4 spaces to get around html formatting issues since tab-size gets stripped by gmail.
+        $line =~ s/\t/    /g;
+
         next unless $line;
         if ( $max && ( $length += length $line ) >= $max ) {
             print $out "</$in_span>" if $in_span;
             print $out ($self->css_inline ? 
-				qq{<span class="lines" style="display:block;padding:0 10px;color:#888;background:#fff;">\@\@ Diff output truncated at $max characters. \@\@\n</span>} :
-				qq{<span class="lines">\@\@ Diff output truncated at $max characters. \@\@\n</span>});
+                qq{<span class="lines" style="display:block;padding:0 10px;color:#888;background:#fff;">\@\@ Diff output truncated at $max characters. \@\@\n</span>} :
+                qq{<span class="lines">\@\@ Diff output truncated at $max characters. \@\@\n</span>});
             $in_span = '';
             last;
         } else {
+        
             if ($line =~ /^(Modified|Added|Deleted|Copied): (.*)/) {
                 my $class = $types{my $action = $1};
                 ++$seen{$2};
                 my $file = encode_entities($2, '<>&"');
                 (my $id = $file) =~ s/[^\w_]//g;
+                # reset the file skip flag until we process the 
+                $skipping_file_diff = 0;
 
                 print $out "</$in_span>" if $in_span;
                 print $out "</span></pre></div>\n" if $in_div;
@@ -126,9 +134,9 @@ sub output_diff {
                     # Looks like they used --no-diff-added or --no-diff-deleted.
                     ($in_span, $in_div) = '';
                     print $out ($self->css_inline ? 
-						( qq{<a id="$id"></a>\n<div class="$class" style="border:1px solid #ccc;margin:10px 0;">},
+                        ( qq{<a id="$id"></a>\n<div class="$class" style="border:1px solid #ccc;margin:10px 0;">},
                           qq{<h4 style="font-family: verdana,arial,helvetica,sans-serif;font-size:10pt;padding:8px;background:#369;color:#fff;margin:0;">$action: $file</h4></div>\n}) :
-						(qq{<a id="$id"></a>\n<div class="$class">}, qq{<h4>$action: $file</h4></div>\n}));
+                        (qq{<a id="$id"></a>\n<div class="$class">}, qq{<h4>$action: $file</h4></div>\n}));
                     next;
                 }
 
@@ -137,20 +145,15 @@ sub output_diff {
                 $before =~ s/[\n\r]+$//;
 
                 if ($before =~ /^\(Binary files differ\)/) {
-                    # Just output the whole file div.
-                    print $out ($self->css_inline ? 
-						( qq{<a id="$id"></a>\n<div class="binary" style="border:1px solid #ccc;margin:10px 0;"><h4 style="font-family: verdana,arial,helvetica,sans-serif;font-size:10pt;padding:8px;background:#369;color:#fff;margin:0;">},
-						  qq{$action: $file</h4>\n},
-						  qq{<pre class="diff" style="color:black;padding:0;line-height:1.2em;margin:0;width:100%;background:#eee;tab-size:4;max-width:100%;padding: 0 0 10px 0;overflow:auto;font-family:'Andale Mono','Courier New',monospace;font-size:9pt;">},
-						  qq{<span style="display:block;padding:0 10px;">\n},
-						  qq{<span style="display:block;padding:0 10px;">$before\n</span></span></pre></div>\n}):
-						( qq{<a id="$id"></a>\n<div class="binary"><h4>},
-						  qq{$action: $file</h4>\n<pre class="diff"><span>\n},
-						  qq{<span class="cx">$before\n</span></span></pre></div>\n}))  ;
-                    ($in_span, $in_div) = '';
+                    # Skip binary files.
+                    $skipping_file_diff = 1;
+                    next;
+                } elsif ($line =~ $excluded_file_types) {
+                    # Skip excluded file types
+                    $skipping_file_diff = 1;
                     next;
                 }
-
+                
                 my ($rev1) = $before =~ /\(rev (\d+)\)$/;
                 my $after = <$diff>;
                 $after =~ s/[\n\r]+$//;
@@ -158,19 +161,23 @@ sub output_diff {
 
                 # Output the headers.
                 print $out ($self->css_inline ? 
-						( qq{<a id="$id"></a>\n<div class="$class" style="border:1px solid #ccc;margin:10px 0;">},
+                        ( qq{<a id="$id"></a>\n<div class="$class" style="border:1px solid #ccc;margin:10px 0;">},
                           qq{<h4 style="font-family: verdana,arial,helvetica,sans-serif;font-size:10pt;padding:8px;background:#369;color:#fff;margin:0;">$action: $file},
-						  " ($rev1 => $rev2)</h4>\n") :
-						( qq{<a id="$id"></a>\n<div class="$class"><h4>$action: $file},
-						  " ($rev1 => $rev2)</h4>\n" ));
+                          " ($rev1 => $rev2)</h4>\n") :
+                        ( qq{<a id="$id"></a>\n<div class="$class"><h4>$action: $file},
+                          " ($rev1 => $rev2)</h4>\n" ));
                 print $out ($self->css_inline ? 
-						( qq{<pre class="diff" style="color:black;padding:0;line-height:1.2em;margin:0;width:100%;background:#eee;tab-size:4;max-width:100%;padding: 0 0 10px 0;overflow:auto;font-family:'Andale Mono','Courier New',monospace;font-size:9pt;">},
+                        ( qq{<pre class="diff" style="color:black;padding:0;line-height:1.2em;margin:0;width:100%;background:#eee;max-width:100%;padding: 0 0 10px 0;overflow:auto;font-family:'Andale Mono','Courier New',monospace;font-size:9pt;">},
                           qq{<span style="display:block;padding:0 10px;">\n<span class="info" style="display:block;padding:0 10px;color:#888;background:#fff;">}) : 
-						qq{<pre class="diff"><span>\n<span class="info">})  ;
+                        qq{<pre class="diff"><span>\n<span class="info">})  ;
                 $in_div = 1;
                 print $out encode_entities($_, '<>&"'), "\n" for ($before, $after);
                 print $out "</span>";
                 $in_span = '';
+            } elsif ($skipping_file_diff) {
+                # Just skip each line of the diff for this file.
+                # This will reset when the start of the next file diff is parsed.
+                next;
             } elsif ($line =~ /^Property changes on: (.*)/ && !$seen{$1}) {
                 # It's just property changes.
                 my $file = encode_entities($1, '<>&"');
@@ -182,21 +189,21 @@ sub output_diff {
                 print $out "</$in_span>" if $in_span;
                 print $out "</span></pre></div>\n" if $in_div;
                 print $out ($self->css_inline ? 
-				    ( qq{<a id="$id"></a>\n<div class="propset" style="border:1px solid #ccc;margin:10px 0;">},
-					  qq{<h4 style="font-family: verdana,arial,helvetica,sans-serif;font-size:10pt;padding:8px;background:#369;color:#fff;margin:0;">},
-					  qq{Property changes: $file</h4>\n},
-					  qq{<pre class="diff" style="color:black;padding:0;line-height:1.2em;margin:0;width:100%;background:#eee;tab-size:4;max-width:100%;padding: 0 0 10px 0;overflow:auto;font-family:'Andale Mono','Courier New',monospace;font-size:9pt;">},
-					  qq{<span style="display:block;padding:0 10px;">\n}) :
-					( qq{<a id="$id"></a>\n<div class="propset">},
-					  qq{<h4>Property changes: $file</h4>\n<pre class="diff"><span>\n}));
+                    ( qq{<a id="$id"></a>\n<div class="propset" style="border:1px solid #ccc;margin:10px 0;">},
+                      qq{<h4 style="font-family: verdana,arial,helvetica,sans-serif;font-size:10pt;padding:8px;background:#369;color:#fff;margin:0;">},
+                      qq{Property changes: $file</h4>\n},
+                      qq{<pre class="diff" style="color:black;padding:0;line-height:1.2em;margin:0;width:100%;background:#eee;max-width:100%;padding: 0 0 10px 0;overflow:auto;font-family:'Andale Mono','Courier New',monospace;font-size:9pt;">},
+                      qq{<span style="display:block;padding:0 10px;">\n}) :
+                    ( qq{<a id="$id"></a>\n<div class="propset">},
+                      qq{<h4>Property changes: $file</h4>\n<pre class="diff"><span>\n}));
                 $in_div = 1;
                 $in_span = '';
             } elsif ($line =~ /^\@\@/) {
                 print $out "</$in_span>" if $in_span;
                 print $out (
                     ($self->css_inline ? 
-						qq{<span class="lines" style="display:block;padding:0 10px;color:#888;background:#fff;">} :
-						qq{<span class="lines">}),
+                        qq{<span class="lines" style="display:block;padding:0 10px;color:#888;background:#fff;">} :
+                        qq{<span class="lines">}),
                     encode_entities($line, '<>&"'),
                     "\n</span>",
                 );
@@ -210,8 +217,8 @@ sub output_diff {
                     print $out "</$in_span>" if $in_span;
                     print $out (
                         ($self->css_inline ? 
-							qq{<$type style="background-color:$clr;text-decoration:none;display:block;padding:0 10px;">} :
-							qq{<$type>}),
+                            qq{<$type style="background-color:$clr;text-decoration:none;display:block;padding:0 10px;">} :
+                            qq{<$type>}),
                         encode_entities($line, '<>&"'),
                         "\n",
                     );
@@ -224,8 +231,8 @@ sub output_diff {
                     print $out "</$in_span>" if $in_span;
                     print $out (
                         ($self->css_inline ? 
-							qq{<span class="cx" style="display:block;padding:0 10px;">} : 
-							qq{<span class="cx">}),
+                            qq{<span class="cx" style="display:block;padding:0 10px;">} : 
+                            qq{<span class="cx">}),
                         encode_entities($line, '<>&"'),
                         "\n",
                     );
@@ -252,7 +259,7 @@ sub _css {
             qq(margin:0;}\n),
         qq(#patch .propset h4, #patch .binary h4 {margin:0;}\n),
          qq(#patch pre {padding:0;line-height:1.2em;margin:0;}\n),
-        qq(#patch .diff {width:100%;background:#eee;tab-size:4;max-width:100%;padding: 0 0 10px 0;),
+        qq(#patch .diff {width:100%;background:#eee;max-width:100%;padding: 0 0 10px 0;),
             qq(overflow:auto;}\n),
         qq(#patch .propset .diff, #patch .binary .diff  {padding:10px 0;}\n),
         qq(#patch span {display:block;padding:0 10px;}\n),
