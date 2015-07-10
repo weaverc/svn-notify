@@ -1827,7 +1827,7 @@ sub diff_handle {
         '-|'   => $self->{svnlook},
         'diff' => $self->{repos_path},
         '-r'   => $self->{revision},
-		'-x --ignore-space-change --ignore-eol-style',  # always ignore whitespace changes and eol changes
+        '-x --ignore-space-change --ignore-eol-style',  # always ignore whitespace changes and eol changes
         ( $self->{diff_switches}
             ? grep { defined && $_ ne '' }
                 # Allow quoting of arguments, but strip out the quotes.
