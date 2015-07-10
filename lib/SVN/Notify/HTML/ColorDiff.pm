@@ -100,7 +100,7 @@ sub output_diff {
     print $out qq{</div>\n<div id="patch">\n<h3>Diff</h3>\n};
     my ($length, %seen) = 0;
     my $max = $self->max_diff_length;
-    my $excluded_file_types = qr/(.pb.h|.pb.cc|_pb2.py)/;
+    my $excluded_file_types = qr/(.pb.h|.pb.cc|_pb2.py)$/;
     my $skipping_file_diff = 0;
 
     while (my $line = <$diff>) {
